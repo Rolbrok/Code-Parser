@@ -15,4 +15,4 @@ TODO List:
 - Functions
 - Include files
 - A standard library, with basic functions, such as print()
-~~- 1 array for all the variables, rather than 1 array per type.~~
+-  ~~1 array for all the variables, rather than 1 array per type.~~
