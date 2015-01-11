@@ -2,6 +2,9 @@ Code Parser
 =====================
 
 To compile:
-```make```
+
+```make ```
+
 To run:
+
 ```./parser```
