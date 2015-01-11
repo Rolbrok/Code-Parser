@@ -39,9 +39,7 @@ double atod(const char *p) {
 
 struct Code_manager
 {
-    std::map<std::string, int>                          int_variables;
-    std::map<std::string, float>                       float_variables;
-    std::map<std::string, double>                   double_variables;
+    std::map<std::string, std::pair<std::string, std::string> > variables;
 };
 
 class file_reader
@@ -52,7 +50,7 @@ private:
     int                                         readFile();
     void                                      printErrors();
     std::string                            getError(int code);
-    bool                                      keywordCheck(std::string key);
+    double                                  getValue(std::string v_name);
     void                                      runCode(int i, std::string name, std::string type, std::string value, bool p_type);
     void                                      runCode(int i, std::string v_name, std::string v_arg);
     bool                                      verbose = false;
@@ -69,7 +67,6 @@ file_reader::file_reader(std::string filename, bool v = false) : verbose(v)
     reserved_keywords.push_back("int");
     reserved_keywords.push_back("float");
     reserved_keywords.push_back("double");
-    reserved_keywords.push_back("print");
 
     std::ifstream file(filename.c_str());
     if(file) {
@@ -110,15 +107,6 @@ void file_reader::printErrors()
             std::cout << "Error [" << error_codes[i] << "]: " << getError(error_codes[i]) << std::endl;
             std::cout <<  "    line " << i+1 <<": " <<  lines[i] << std::endl << std::endl;
         }
-    }
-}
-
-bool file_reader::keywordCheck(std::string key)
-{
-    if(!key.empty()){
-        return true;
-    } else {
-        return false;
     }
 }
 
@@ -194,36 +182,25 @@ void file_reader::runCode(int i, std::string v_name, std::string v_type, std::st
             if (verbose)
                 std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] DECL_ERROR_CODE LINE: " << i+1 << " CODE: 5" << std::endl;
         } else if(!v_type.empty()) {
-            if(v_type=="int"){
-                v_man.int_variables[v_name] = atoi(v_value.c_str());
-                if(verbose)
-                    std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] NEW_INT_VARIABLE NAME: " << v_name << " VALUE: " << atoi(v_value.c_str()) << std::endl;
-            } else if(v_type=="float"){
-                v_man.float_variables[v_name] = atof(v_value.c_str());
-                 if(verbose)
-                    std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] NEW_FLOAT_VARIABLE NAME: " << v_name << " VALUE: " << atof(v_value.c_str()) << std::endl;
-            } else if(v_type=="double"){
-                v_man.double_variables[v_name] = atod(v_value.c_str());
-                 if(verbose)
-                    std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] NEW_DOUBLE_VARIABLE NAME: " << v_name << " VALUE: " << atod(v_value.c_str()) << std::endl;
+            if(std::find(reserved_keywords.begin(), reserved_keywords.end(), v_type)!=reserved_keywords.end()) {
+                bool newVar = (v_man.variables.find(v_name) == v_man.variables.end());
+                v_man.variables[v_name] = std::make_pair(v_type, v_value);
+                if(verbose){
+                    if(newVar)
+                        std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] NEW_VARIABLE NAME: " << v_name << " TYPE: " << v_type << " VALUE: " << v_value << std::endl;
+                    else
+                        std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] ALTER_VARIABLE NAME: " << v_name << " TYPE: " << v_type << " VALUE: " << v_value << std::endl;
+                }
             } else {
                 error_codes[i] = 4; // Unknown type
                 if (verbose)
                     std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] DECL_ERROR_CODE LINE: " << i+1 << " CODE: 4" << std::endl;
             }
         } else if(!v_value.empty()) {
-            if(v_man.int_variables.find(v_name) != v_man.int_variables.end()) {
-                v_man.int_variables[v_name] = atoi(v_value.c_str());
+            if(v_man.variables.find(v_name) != v_man.variables.end()) {
+                v_man.variables[v_name].second = v_value;
                 if(verbose)
-                    std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] ALTER_INT_VARIABLE NAME: " << v_name << " VALUE: " << atoi(v_value.c_str()) << std::endl;
-            } else if(v_man.float_variables.find(v_name) != v_man.float_variables.end()) {
-                v_man.float_variables[v_name] = atof(v_value.c_str());
-                if(verbose)
-                    std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] ALTER_FLOAT_VARIABLE NAME: " << v_name << " VALUE: " << atof(v_value.c_str()) << std::endl;
-            } else if(v_man.double_variables.find(v_name) != v_man.double_variables.end()) {
-                v_man.double_variables[v_name] = atod(v_value.c_str());
-                if(verbose)
-                    std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] ALTER_DOUBLE_VARIABLE NAME: " << v_name << " VALUE: " << atod(v_value.c_str()) << std::endl;
+                    std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] ALTER_VARIABLE NAME: " << v_name << " VALUE: " << atoi(v_value.c_str()) << std::endl;
             } else {
                 // Since double is the largest implemented variable yet, every variable without type will be a double.
                 if(!p_type) {
@@ -231,7 +208,7 @@ void file_reader::runCode(int i, std::string v_name, std::string v_type, std::st
                     if(verbose)
                         std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] DECL_ERROR_CODE LINE: " << i+1 << " CODE: 1" << std::endl;
                 } else {
-                    v_man.double_variables[v_name] = atod(v_value.c_str());
+                    v_man.variables[v_name] = std::make_pair("double", v_value);
                     if(verbose)
                         std::cout << "[" <<double(clock()-_readStart)/CLOCKS_PER_SEC << "s] NEW_DOUBLE_VARIABLE NAME: " << v_name << " VALUE: " << atod(v_value.c_str()) << std::endl;
                 }
@@ -244,17 +221,25 @@ void file_reader::runCode(int i, std::string v_name, std::string v_type, std::st
     }
 }
 
+//template<typename T>
+double file_reader::getValue(std::string v_name)
+{
+    if(v_man.variables[v_name].first == "int") {
+        return atoi(v_man.variables[v_name].second.c_str());
+    } else if(v_man.variables[v_name].first == "float") {
+        return atof(v_man.variables[v_name].second.c_str());
+    } else if(v_man.variables[v_name].first == "double") {
+        return atod(v_man.variables[v_name].second.c_str());
+    }
+}
+
 void file_reader::runCode(int i, std::string v_name, std::string v_arg)
 {
     if(!v_name.empty()) {
         if(!v_arg.empty()) {
             if(v_name=="print"){
-                if(v_man.int_variables.find(v_arg) != v_man.int_variables.end()) {
-                    std::cout << v_man.int_variables[v_arg] << std::endl;
-                } else if(v_man.float_variables.find(v_arg) != v_man.float_variables.end()) {
-                    std::cout << v_man.float_variables[v_arg] << std::endl;
-                } else if(v_man.double_variables.find(v_arg) != v_man.double_variables.end()) {
-                    std::cout << v_man.double_variables[v_arg] << std::endl;
+                if(v_man.variables.find(v_arg) != v_man.variables.end()) {
+                    std::cout << getValue(v_arg) << std::endl;
                 } else {
                     error_codes[i] = 3; // Error: No Such Variable
                     if(verbose)
