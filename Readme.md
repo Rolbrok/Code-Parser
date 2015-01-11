@@ -7,4 +7,4 @@ To compile:
 
 To run:
 
-```./parser```
+```./parser [filename] [-v] ```
